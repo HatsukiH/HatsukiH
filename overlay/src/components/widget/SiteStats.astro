@@ -1,0 +1,51 @@
+---
+import WidgetLayout from "./WidgetLayout.astro";
+
+// 建站日期：用于计算「本站已运行 N 天」
+const SITE_START = "2026-10-12";
+
+interface Props {
+	class?: string;
+	style?: string;
+}
+const className = Astro.props.class;
+const style = Astro.props.style;
+---
+
+<WidgetLayout id="site-stats" name="小站统计" class={className} style={style}>
+    <div class="flex flex-col gap-2.5 py-1 text-sm">
+        <div class="flex items-center justify-between">
+            <span class="text-50">本站已运行</span>
+            <span class="font-bold text-[var(--primary)]">
+                <span id="site-running-days">--</span> 天
+            </span>
+        </div>
+        <div class="flex items-center justify-between">
+            <span class="text-50">总访问量</span>
+            <span class="font-bold text-[var(--primary)]">
+                <span id="busuanzi_value_site_pv">--</span>
+            </span>
+        </div>
+        <div class="flex items-center justify-between">
+            <span class="text-50">访客数</span>
+            <span class="font-bold text-[var(--primary)]">
+                <span id="busuanzi_value_site_uv">--</span>
+            </span>
+        </div>
+    </div>
+</WidgetLayout>
+
+<!-- 不蒜子：零配置的公共统计（离线/被墙时保持占位符，不影响页面） -->
+<script is:inline src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" async></script>
+
+<script>
+    // 计算本站已运行天数
+    function updateRunningDays() {
+        const el = document.getElementById("site-running-days");
+        if (!el) return;
+        const start = new Date("2026-10-12T00:00:00");
+        const days = Math.floor((Date.now() - start.getTime()) / 86400000);
+        el.textContent = days > 0 ? String(days) : "0";
+    }
+    updateRunningDays();
+</script>

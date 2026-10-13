@@ -1,0 +1,45 @@
+name: Deploy to GitHub Pages
+
+on:
+  # 在推送到 main 分支时触发
+  push:
+    branches: [ main ]
+  # 允许手动从 Actions 标签页触发
+  workflow_dispatch:
+
+# 设置 GITHUB_TOKEN 的权限，以允许部署到 GitHub Pages
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# 只允许一个并发部署，跳过正在运行和最新排队之间的运行
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install, build, and upload your site
+        uses: withastro/action@v2
+        with:
+          # 如果你的项目不是使用 pnpm，可以在这里指定包管理器，例如 npm
+          package-manager: npm@latest
+          # 如果构建时需要环境变量，可以取消下面的注释并添加
+          # env:
+          #   PUBLIC_API_URL: ${{ secrets.PUBLIC_API_URL }}
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4

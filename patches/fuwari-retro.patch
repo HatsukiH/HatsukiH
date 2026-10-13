@@ -1,0 +1,1529 @@
+diff -ruN a/src/components/Footer.astro b/src/components/Footer.astro
+--- a/src/components/Footer.astro	2025-12-12 07:51:08.000000000 +0800
++++ b/src/components/Footer.astro	2026-10-12 16:12:32.313480900 +0800
+@@ -10,6 +10,9 @@
+ <div class="transition border-t border-black/10 dark:border-white/15 my-10 border-dashed mx-32"></div>
+ <!--<div class="transition bg-[oklch(92%_0.01_var(&#45;&#45;hue))] dark:bg-black rounded-2xl py-8 mt-4 mb-8 flex flex-col items-center justify-center px-6">-->
+ <div class="transition border-dashed border-[oklch(85%_0.01_var(--hue))] dark:border-white/15 rounded-2xl mb-12 flex flex-col items-center justify-center px-6">
++    <div class="transition text-50 text-xs text-center mb-2">
++        本站已运行 <span class="footer-running-days">--</span> 天 · 感谢来访
++    </div>
+     <div class="transition text-50 text-sm text-center">
+         &copy; <span id="copyright-year">{currentYear}</span> {profileConfig.name}. All Rights Reserved. /
+         <a class="transition link text-[var(--primary)] font-medium" target="_blank" href={url('rss.xml')}>RSS</a> /
+@@ -18,4 +21,17 @@
+         <a class="transition link text-[var(--primary)] font-medium" target="_blank" href="https://astro.build">Astro</a> &
+         <a class="transition link text-[var(--primary)] font-medium" target="_blank" href="https://github.com/saicaca/fuwari">Fuwari</a>
+     </div>
+-</div>
+\ No newline at end of file
++</div>
++
++<script>
++    // 页脚「本站已运行 N 天」（页脚在布局中会渲染两次，故用类名批量更新）
++    function updateFooterRunningDays() {
++        const nodes = document.querySelectorAll(".footer-running-days");
++        if (!nodes.length) return;
++        const start = new Date("2026-10-12T00:00:00");
++        const days = Math.floor((Date.now() - start.getTime()) / 86400000);
++        const text = days > 0 ? String(days) : "0";
++        for (const n of nodes) n.textContent = text;
++    }
++    updateFooterRunningDays();
++</script>
+diff -ruN a/src/components/PostCard.astro b/src/components/PostCard.astro
+--- a/src/components/PostCard.astro	2025-12-12 07:51:08.000000000 +0800
++++ b/src/components/PostCard.astro	2026-10-12 16:23:51.935523100 +0800
+@@ -38,7 +38,7 @@
+ 
+ const hasCover = image !== undefined && image !== null && image !== "";
+ 
+-const coverWidth = "28%";
++const coverWidth = "22%";
+ 
+ const { remarkPluginFrontmatter } = await entry.render();
+ ---
+diff -ruN a/src/components/widget/BgmPlayer.svelte b/src/components/widget/BgmPlayer.svelte
+--- a/src/components/widget/BgmPlayer.svelte	1970-01-01 08:00:00.000000000 +0800
++++ b/src/components/widget/BgmPlayer.svelte	2026-10-12 16:00:51.943628200 +0800
+@@ -0,0 +1,73 @@
++<script lang="ts">
++	import { onMount } from "svelte";
++
++	// 播放列表：把音频文件放进 public/music/，再在这里登记即可
++	// 默认不自动播放（现代浏览器也不允许），点一下才响
++	type Track = { title: string; artist: string; src: string };
++
++	const playlist: Track[] = [
++		{ title: "占位曲目 · 请替换", artist: "unknown", src: "/music/placeholder.wav" },
++	];
++
++	let audioEl: HTMLAudioElement;
++	let index = 0;
++	let playing = false;
++	let title = playlist[0].title;
++
++	function loadTrack(i: number, autoplay: boolean) {
++		if (!audioEl) return;
++		index = (i + playlist.length) % playlist.length;
++		title = playlist[index].title;
++		audioEl.src = playlist[index].src;
++		audioEl.load();
++		if (autoplay) {
++			audioEl
++				.play()
++				.then(() => (playing = true))
++				.catch(() => (playing = false));
++		} else {
++			playing = false;
++		}
++	}
++
++	function toggle() {
++		if (!audioEl) return;
++		if (audioEl.paused) {
++			audioEl
++				.play()
++				.then(() => (playing = true))
++				.catch(() => (playing = false));
++		} else {
++			audioEl.pause();
++			playing = false;
++		}
++	}
++
++	onMount(() => {
++		loadTrack(0, false);
++	});
++</script>
++
++<div class="flex items-center gap-2 rounded-lg border border-dashed border-[var(--line-color)] px-2 py-2">
++	<button
++		type="button"
++		onclick={toggle}
++		class="btn-regular h-8 w-8 shrink-0 rounded-md text-sm"
++		aria-label="播放或暂停"
++	>
++		{playing ? "‖" : "▶"}
++	</button>
++	<div class="min-w-0 flex-1">
++		<div class="truncate text-xs text-90">{title}</div>
++		<div class="text-[10px] tracking-wide text-30">BGM · 点击播放</div>
++	</div>
++	<button
++		type="button"
++		onclick={() => loadTrack(index + 1, playing)}
++		class="btn-plain h-8 w-8 shrink-0 rounded-md text-base"
++		aria-label="下一首"
++	>
++		»
++	</button>
++</div>
++<audio bind:this={audioEl} preload="none" onended={() => loadTrack(index + 1, true)}></audio>
+diff -ruN a/src/components/widget/Friends.astro b/src/components/widget/Friends.astro
+--- a/src/components/widget/Friends.astro	1970-01-01 08:00:00.000000000 +0800
++++ b/src/components/widget/Friends.astro	2026-10-13 15:02:46.961781200 +0800
+@@ -0,0 +1,44 @@
++---
++import { friendsConfig } from "../../config";
++import WidgetLayout from "./WidgetLayout.astro";
++
++interface Props {
++	class?: string;
++	style?: string;
++}
++const className = Astro.props.class;
++const style = Astro.props.style;
++---
++
++<WidgetLayout id="friends" name="友情链接" class={className} style={style}>
++    <div class="flex flex-col gap-1 py-1">
++        {friendsConfig.map((f) => (
++            <a
++                href={f.url}
++                target="_blank"
++                rel="noopener"
++                aria-label={f.name}
++                class="group flex items-center gap-2.5 rounded-lg px-1.5 py-1.5 transition hover:bg-[var(--btn-plain-bg-hover)]"
++            >
++                {f.avatar && (
++                    <img
++                        src={f.avatar}
++                        alt={f.name}
++                        loading="lazy"
++                        onerror="this.onerror=null;this.src='/images/link-avatar.svg'"
++                        class="h-7 w-7 shrink-0 rounded-md object-cover"
++                    />
++                )}
++                <div class="min-w-0">
++                    <div class="truncate text-sm font-bold text-90 transition group-hover:text-[var(--primary)]">
++                        {f.name}
++                    </div>
++                    {f.desc && <div class="truncate text-xs text-50">{f.desc}</div>}
++                </div>
++            </a>
++        ))}
++        {friendsConfig.length === 0 && (
++            <div class="px-1.5 py-2 text-sm text-50">还没有友链，去 config.ts 里加几个吧。</div>
++        )}
++    </div>
++</WidgetLayout>
+diff -ruN a/src/components/widget/SideBar.astro b/src/components/widget/SideBar.astro
+--- a/src/components/widget/SideBar.astro	2025-12-12 07:51:08.000000000 +0800
++++ b/src/components/widget/SideBar.astro	2026-10-12 16:01:13.480041200 +0800
+@@ -1,8 +1,12 @@
+ ---
+ import type { MarkdownHeading } from "astro";
++import BgmPlayer from "./BgmPlayer.svelte";
+ import Categories from "./Categories.astro";
++import Friends from "./Friends.astro";
+ import Profile from "./Profile.astro";
++import SiteStats from "./SiteStats.astro";
+ import Tag from "./Tags.astro";
++import WidgetLayout from "./WidgetLayout.astro";
+ 
+ interface Props {
+ 	class?: string;
+@@ -16,7 +20,14 @@
+         <Profile></Profile>
+     </div>
+     <div id="sidebar-sticky" class="transition-all duration-700 flex flex-col w-full gap-4 top-4 sticky top-4">
+-        <Categories class="onload-animation" style="animation-delay: 150ms"></Categories>
+-        <Tag class="onload-animation" style="animation-delay: 200ms"></Tag>
++        <SiteStats class="onload-animation" style="animation-delay: 100ms"></SiteStats>
++        <WidgetLayout id="bgm" name="背景音乐" class="onload-animation" style="animation-delay: 130ms">
++            <div class="pb-1 pt-1">
++                <BgmPlayer client:load></BgmPlayer>
++            </div>
++        </WidgetLayout>
++        <Friends class="onload-animation" style="animation-delay: 160ms"></Friends>
++        <Categories class="onload-animation" style="animation-delay: 190ms"></Categories>
++        <Tag class="onload-animation" style="animation-delay: 220ms"></Tag>
+     </div>
+ </div>
+diff -ruN a/src/components/widget/SiteStats.astro b/src/components/widget/SiteStats.astro
+--- a/src/components/widget/SiteStats.astro	1970-01-01 08:00:00.000000000 +0800
++++ b/src/components/widget/SiteStats.astro	2026-10-12 16:00:33.157065600 +0800
+@@ -0,0 +1,51 @@
++---
++import WidgetLayout from "./WidgetLayout.astro";
++
++// 建站日期：用于计算「本站已运行 N 天」
++const SITE_START = "2026-10-12";
++
++interface Props {
++	class?: string;
++	style?: string;
++}
++const className = Astro.props.class;
++const style = Astro.props.style;
++---
++
++<WidgetLayout id="site-stats" name="小站统计" class={className} style={style}>
++    <div class="flex flex-col gap-2.5 py-1 text-sm">
++        <div class="flex items-center justify-between">
++            <span class="text-50">本站已运行</span>
++            <span class="font-bold text-[var(--primary)]">
++                <span id="site-running-days">--</span> 天
++            </span>
++        </div>
++        <div class="flex items-center justify-between">
++            <span class="text-50">总访问量</span>
++            <span class="font-bold text-[var(--primary)]">
++                <span id="busuanzi_value_site_pv">--</span>
++            </span>
++        </div>
++        <div class="flex items-center justify-between">
++            <span class="text-50">访客数</span>
++            <span class="font-bold text-[var(--primary)]">
++                <span id="busuanzi_value_site_uv">--</span>
++            </span>
++        </div>
++    </div>
++</WidgetLayout>
++
++<!-- 不蒜子：零配置的公共统计（离线/被墙时保持占位符，不影响页面） -->
++<script is:inline src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" async></script>
++
++<script>
++    // 计算本站已运行天数
++    function updateRunningDays() {
++        const el = document.getElementById("site-running-days");
++        if (!el) return;
++        const start = new Date("2026-10-12T00:00:00");
++        const days = Math.floor((Date.now() - start.getTime()) / 86400000);
++        el.textContent = days > 0 ? String(days) : "0";
++    }
++    updateRunningDays();
++</script>
+diff -ruN a/src/config.ts b/src/config.ts
+--- a/src/config.ts	2025-12-12 07:51:08.000000000 +0800
++++ b/src/config.ts	2026-10-12 16:00:23.475185600 +0800
+@@ -1,5 +1,6 @@
+ import type {
+ 	ExpressiveCodeConfig,
++	FriendLink,
+ 	LicenseConfig,
+ 	NavBarConfig,
+ 	ProfileConfig,
+@@ -8,12 +9,12 @@
+ import { LinkPreset } from "./types/config";
+ 
+ export const siteConfig: SiteConfig = {
+-	title: "Fuwari",
+-	subtitle: "Demo Site",
+-	lang: "en", // Language code, e.g. 'en', 'zh_CN', 'ja', etc.
++	title: "某某の小部屋",
++	subtitle: "记录一些不重要的小事",
++	lang: "zh_CN", // Language code, e.g. 'en', 'zh_CN', 'ja', etc.
+ 	themeColor: {
+-		hue: 250, // Default hue for the theme color, from 0 to 360. e.g. red: 0, teal: 200, cyan: 250, pink: 345
+-		fixed: false, // Hide the theme color picker for visitors
++		hue: 265, // 褪色靛青 —— 古早二次元配色（0~360）
++		fixed: true, // 固定色相，不让访客改动，保持氛围统一
+ 	},
+ 	banner: {
+ 		enable: false,
+@@ -45,34 +46,36 @@
+ 		LinkPreset.Archive,
+ 		LinkPreset.About,
+ 		{
++			name: "友链",
++			url: "/links/", // 站内链接无需包含 base 路径
++		},
++		{
+ 			name: "GitHub",
+-			url: "https://github.com/saicaca/fuwari", // Internal links should not include the base path, as it is automatically added
++			url: "https://github.com/your-name", // 占位：改成你自己的地址
+ 			external: true, // Show an external link icon and will open in a new tab
+ 		},
+ 	],
+ };
+ 
+ export const profileConfig: ProfileConfig = {
+-	avatar: "assets/images/demo-avatar.png", // Relative to the /src directory. Relative to the /public directory if it starts with '/'
+-	name: "Lorem Ipsum",
+-	bio: "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
++	avatar: "assets/images/demo-avatar.png", // 占位头像：可换成 src/assets/images/ 下的图，或用 / 开头指向 public
++	name: "某某",
++	bio: "一只还留在这个互联网角落的老二次元",
+ 	links: [
+ 		{
+-			name: "Twitter",
+-			icon: "fa6-brands:twitter", // Visit https://icones.js.org/ for icon codes
+-			// You will need to install the corresponding icon set if it's not already included
+-			// `pnpm add @iconify-json/<icon-set-name>`
+-			url: "https://twitter.com",
++			name: "GitHub",
++			icon: "fa6-brands:github", // Visit https://icones.js.org/ for icon codes
++			url: "https://github.com/your-name",
+ 		},
+ 		{
+-			name: "Steam",
+-			icon: "fa6-brands:steam",
+-			url: "https://store.steampowered.com",
++			name: "邮箱",
++			icon: "fa6-solid:envelope",
++			url: "mailto:you@example.com",
+ 		},
+ 		{
+-			name: "GitHub",
+-			icon: "fa6-brands:github",
+-			url: "https://github.com/saicaca/fuwari",
++			name: "RSS",
++			icon: "fa6-solid:rss",
++			url: "/rss.xml",
+ 		},
+ 	],
+ };
+@@ -88,3 +91,25 @@
+ 	// Please select a dark theme, as this blog theme currently only supports dark background color
+ 	theme: "github-dark",
+ };
++
++// 友情链接墙（占位数据，替换成你自己常逛的小站）
++export const friendsConfig: FriendLink[] = [
++	{
++		name: "某某の小站",
++		url: "https://example.com",
++		avatar: "https://example.com/avatar.png",
++		desc: "一个不太更新的博客",
++	},
++	{
++		name: "アニメ置き場",
++		url: "https://example.org",
++		avatar: "https://example.org/avatar.png",
++		desc: "追番与截图堆放处",
++	},
++	{
++		name: "深夜写代码",
++		url: "https://example.net",
++		avatar: "https://example.net/avatar.png",
++		desc: "技术随想与踩坑记录",
++	},
++];
+diff -ruN a/src/content/posts/diary-new-home.md b/src/content/posts/diary-new-home.md
+--- a/src/content/posts/diary-new-home.md	1970-01-01 08:00:00.000000000 +0800
++++ b/src/content/posts/diary-new-home.md	2026-10-12 16:01:05.108836200 +0800
+@@ -0,0 +1,18 @@
++---
++title: 换了新家的第一天
++published: 2026-10-12
++description: 把以前散落在各处的日记搬了过来，随便写几句开场白。
++tags: ["日记", "开站"]
++category: 日记
++draft: false
++---
++
++折腾了一晚上，总算把这个小站搭起来了。
++
++以前写东西都是随手记在便签或者备忘录里，东一块西一块，回头基本不会再看。现在把它们收拢到一个地方，按日期排好，心里踏实一点。
++
++选了个偏暖的米黄色底，配一点褪了色的靛青，字体换成了霞鹜文楷。说不上多好看，但看着舒服，有点像很多年前逛过的那些个人小站。
++
++希望这次能坚持写下去。
++
++今天就到这里吧。
+diff -ruN a/src/content/posts/draft.md b/src/content/posts/draft.md
+--- a/src/content/posts/draft.md	2025-12-12 07:51:08.000000000 +0800
++++ b/src/content/posts/draft.md	1970-01-01 08:00:00.000000000 +0800
+@@ -1,22 +0,0 @@
+----
+-title: Draft Example
+-published: 2022-07-01
+-tags: [Markdown, Blogging, Demo]
+-category: Examples
+-draft: true
+----
+-
+-# This Article is a Draft
+-
+-This article is currently in a draft state and is not published. Therefore, it will not be visible to the general audience. The content is still a work in progress and may require further editing and review.
+-
+-When the article is ready for publication, you can update the "draft" field to "false" in the Frontmatter:
+-
+-```markdown
+----
+-title: Draft Example
+-published: 2024-01-11T04:40:26.381Z
+-tags: [Markdown, Blogging, Demo]
+-category: Examples
+-draft: false
+----
+diff -ruN a/src/content/posts/essay-slow-down.md b/src/content/posts/essay-slow-down.md
+--- a/src/content/posts/essay-slow-down.md	1970-01-01 08:00:00.000000000 +0800
++++ b/src/content/posts/essay-slow-down.md	2026-10-12 16:01:05.106847100 +0800
+@@ -0,0 +1,18 @@
++---
++title: 关于「慢下来」这件事
++published: 2026-10-10
++description: 一些关于内容、节奏和表达的零散念头。
++tags: ["随笔", "随笔集"]
++category: 随笔
++draft: false
++---
++
++最近在想一个问题：我们是不是把太多东西都做得太快了。
++
++刷信息流的时候，一条内容撑不过三秒就被划走；写东西也总想着一次写"对"，结果反而什么都写不出来。
++
++其实以前不是这样的。以前的博客，一篇文章可以写上一整天，配一张自己拍的照片，底下有人认认真真留一条评论，然后作者会认真地回。
++
++我想把这里也做成那样的地方——不快，不吵，不追热点。想到什么写什么，写不好也发出来，算是给自己一个交代。
++
++如果哪天你偶然路过，看到这些不成体系的话，也算是一种缘分。
+diff -ruN a/src/content/posts/expressive-code.md b/src/content/posts/expressive-code.md
+--- a/src/content/posts/expressive-code.md	2025-12-12 07:51:08.000000000 +0800
++++ b/src/content/posts/expressive-code.md	1970-01-01 08:00:00.000000000 +0800
+@@ -1,311 +0,0 @@
+----
+-title: Expressive Code Example
+-published: 2024-04-10
+-description: How code blocks look in Markdown using Expressive Code.
+-tags: [Markdown, Blogging, Demo]
+-category: Examples
+-draft: false
+----
+-
+-Here, we'll explore how code blocks look using [Expressive Code](https://expressive-code.com/). The provided examples are based on the official documentation, which you can refer to for further details.
+-
+-## Expressive Code
+-
+-### Syntax Highlighting
+-
+-[Syntax Highlighting](https://expressive-code.com/key-features/syntax-highlighting/)
+-
+-#### Regular syntax highlighting
+-
+-```js
+-console.log('This code is syntax highlighted!')
+-```
+-
+-#### Rendering ANSI escape sequences
+-
+-```ansi
+-ANSI colors:
+-- Regular: [31mRed[0m [32mGreen[0m [33mYellow[0m [34mBlue[0m [35mMagenta[0m [36mCyan[0m
+-- Bold:    [1;31mRed[0m [1;32mGreen[0m [1;33mYellow[0m [1;34mBlue[0m [1;35mMagenta[0m [1;36mCyan[0m
+-- Dimmed:  [2;31mRed[0m [2;32mGreen[0m [2;33mYellow[0m [2;34mBlue[0m [2;35mMagenta[0m [2;36mCyan[0m
+-
+-256 colors (showing colors 160-177):
+-[38;5;160m160 [38;5;161m161 [38;5;162m162 [38;5;163m163 [38;5;164m164 [38;5;165m165[0m
+-[38;5;166m166 [38;5;167m167 [38;5;168m168 [38;5;169m169 [38;5;170m170 [38;5;171m171[0m
+-[38;5;172m172 [38;5;173m173 [38;5;174m174 [38;5;175m175 [38;5;176m176 [38;5;177m177[0m
+-
+-Full RGB colors:
+-[38;2;34;139;34mForestGreen - RGB(34, 139, 34)[0m
+-
+-Text formatting: [1mBold[0m [2mDimmed[0m [3mItalic[0m [4mUnderline[0m
+-```
+-
+-### Editor & Terminal Frames
+-
+-[Editor & Terminal Frames](https://expressive-code.com/key-features/frames/)
+-
+-#### Code editor frames
+-
+-```js title="my-test-file.js"
+-console.log('Title attribute example')
+-```
+-
+----
+-
+-```html
+-<!-- src/content/index.html -->
+-<div>File name comment example</div>
+-```
+-
+-#### Terminal frames
+-
+-```bash
+-echo "This terminal frame has no title"
+-```
+-
+----
+-
+-```powershell title="PowerShell terminal example"
+-Write-Output "This one has a title!"
+-```
+-
+-#### Overriding frame types
+-
+-```sh frame="none"
+-echo "Look ma, no frame!"
+-```
+-
+----
+-
+-```ps frame="code" title="PowerShell Profile.ps1"
+-# Without overriding, this would be a terminal frame
+-function Watch-Tail { Get-Content -Tail 20 -Wait $args }
+-New-Alias tail Watch-Tail
+-```
+-
+-### Text & Line Markers
+-
+-[Text & Line Markers](https://expressive-code.com/key-features/text-markers/)
+-
+-#### Marking full lines & line ranges
+-
+-```js {1, 4, 7-8}
+-// Line 1 - targeted by line number
+-// Line 2
+-// Line 3
+-// Line 4 - targeted by line number
+-// Line 5
+-// Line 6
+-// Line 7 - targeted by range "7-8"
+-// Line 8 - targeted by range "7-8"
+-```
+-
+-#### Selecting line marker types (mark, ins, del)
+-
+-```js title="line-markers.js" del={2} ins={3-4} {6}
+-function demo() {
+-  console.log('this line is marked as deleted')
+-  // This line and the next one are marked as inserted
+-  console.log('this is the second inserted line')
+-
+-  return 'this line uses the neutral default marker type'
+-}
+-```
+-
+-#### Adding labels to line markers
+-
+-```jsx {"1":5} del={"2":7-8} ins={"3":10-12}
+-// labeled-line-markers.jsx
+-<button
+-  role="button"
+-  {...props}
+-  value={value}
+-  className={buttonClassName}
+-  disabled={disabled}
+-  active={active}
+->
+-  {children &&
+-    !active &&
+-    (typeof children === 'string' ? <span>{children}</span> : children)}
+-</button>
+-```
+-
+-#### Adding long labels on their own lines
+-
+-```jsx {"1. Provide the value prop here:":5-6} del={"2. Remove the disabled and active states:":8-10} ins={"3. Add this to render the children inside the button:":12-15}
+-// labeled-line-markers.jsx
+-<button
+-  role="button"
+-  {...props}
+-
+-  value={value}
+-  className={buttonClassName}
+-
+-  disabled={disabled}
+-  active={active}
+->
+-
+-  {children &&
+-    !active &&
+-    (typeof children === 'string' ? <span>{children}</span> : children)}
+-</button>
+-```
+-
+-#### Using diff-like syntax
+-
+-```diff
+-+this line will be marked as inserted
+--this line will be marked as deleted
+-this is a regular line
+-```
+-
+----
+-
+-```diff
+---- a/README.md
+-+++ b/README.md
+-@@ -1,3 +1,4 @@
+-+this is an actual diff file
+--all contents will remain unmodified
+- no whitespace will be removed either
+-```
+-
+-#### Combining syntax highlighting with diff-like syntax
+-
+-```diff lang="js"
+-  function thisIsJavaScript() {
+-    // This entire block gets highlighted as JavaScript,
+-    // and we can still add diff markers to it!
+--   console.log('Old code to be removed')
+-+   console.log('New and shiny code!')
+-  }
+-```
+-
+-#### Marking individual text inside lines
+-
+-```js "given text"
+-function demo() {
+-  // Mark any given text inside lines
+-  return 'Multiple matches of the given text are supported';
+-}
+-```
+-
+-#### Regular expressions
+-
+-```ts /ye[sp]/
+-console.log('The words yes and yep will be marked.')
+-```
+-
+-#### Escaping forward slashes
+-
+-```sh /\/ho.*\//
+-echo "Test" > /home/test.txt
+-```
+-
+-#### Selecting inline marker types (mark, ins, del)
+-
+-```js "return true;" ins="inserted" del="deleted"
+-function demo() {
+-  console.log('These are inserted and deleted marker types');
+-  // The return statement uses the default marker type
+-  return true;
+-}
+-```
+-
+-### Word Wrap
+-
+-[Word Wrap](https://expressive-code.com/key-features/word-wrap/)
+-
+-#### Configuring word wrap per block
+-
+-```js wrap
+-// Example with wrap
+-function getLongString() {
+-  return 'This is a very long string that will most probably not fit into the available space unless the container is extremely wide'
+-}
+-```
+-
+----
+-
+-```js wrap=false
+-// Example with wrap=false
+-function getLongString() {
+-  return 'This is a very long string that will most probably not fit into the available space unless the container is extremely wide'
+-}
+-```
+-
+-#### Configuring indentation of wrapped lines
+-
+-```js wrap preserveIndent
+-// Example with preserveIndent (enabled by default)
+-function getLongString() {
+-  return 'This is a very long string that will most probably not fit into the available space unless the container is extremely wide'
+-}
+-```
+-
+----
+-
+-```js wrap preserveIndent=false
+-// Example with preserveIndent=false
+-function getLongString() {
+-  return 'This is a very long string that will most probably not fit into the available space unless the container is extremely wide'
+-}
+-```
+-
+-## Collapsible Sections
+-
+-[Collapsible Sections](https://expressive-code.com/plugins/collapsible-sections/)
+-
+-```js collapse={1-5, 12-14, 21-24}
+-// All this boilerplate setup code will be collapsed
+-import { someBoilerplateEngine } from '@example/some-boilerplate'
+-import { evenMoreBoilerplate } from '@example/even-more-boilerplate'
+-
+-const engine = someBoilerplateEngine(evenMoreBoilerplate())
+-
+-// This part of the code will be visible by default
+-engine.doSomething(1, 2, 3, calcFn)
+-
+-function calcFn() {
+-  // You can have multiple collapsed sections
+-  const a = 1
+-  const b = 2
+-  const c = a + b
+-
+-  // This will remain visible
+-  console.log(`Calculation result: ${a} + ${b} = ${c}`)
+-  return c
+-}
+-
+-// All this code until the end of the block will be collapsed again
+-engine.closeConnection()
+-engine.freeMemory()
+-engine.shutdown({ reason: 'End of example boilerplate code' })
+-```
+-
+-## Line Numbers
+-
+-[Line Numbers](https://expressive-code.com/plugins/line-numbers/)
+-
+-### Displaying line numbers per block
+-
+-```js showLineNumbers
+-// This code block will show line numbers
+-console.log('Greetings from line 2!')
+-console.log('I am on line 3')
+-```
+-
+----
+-
+-```js showLineNumbers=false
+-// Line numbers are disabled for this block
+-console.log('Hello?')
+-console.log('Sorry, do you know what line I am on?')
+-```
+-
+-### Changing the starting line number
+-
+-```js showLineNumbers startLineNumber=5
+-console.log('Greetings from line 5!')
+-console.log('I am on line 6')
+-```
+Binary files a/src/content/posts/guide/cover.jpeg and b/src/content/posts/guide/cover.jpeg differ
+diff -ruN a/src/content/posts/guide/index.md b/src/content/posts/guide/index.md
+--- a/src/content/posts/guide/index.md	2025-12-12 07:51:08.000000000 +0800
++++ b/src/content/posts/guide/index.md	1970-01-01 08:00:00.000000000 +0800
+@@ -1,51 +0,0 @@
+----
+-title: Simple Guides for Fuwari
+-published: 2024-04-01
+-description: "How to use this blog template."
+-image: "./cover.jpeg"
+-tags: ["Fuwari", "Blogging", "Customization"]
+-category: Guides
+-draft: false
+----
+-
+-> Cover image source: [Source](https://image.civitai.com/xG1nkqKTMzGDvpLrqFT7WA/208fc754-890d-4adb-9753-2c963332675d/width=2048/01651-1456859105-(colour_1.5),girl,_Blue,yellow,green,cyan,purple,red,pink,_best,8k,UHD,masterpiece,male%20focus,%201boy,gloves,%20ponytail,%20long%20hair,.jpeg)
+-
+-This blog template is built with [Astro](https://astro.build/). For the things that are not mentioned in this guide, you may find the answers in the [Astro Docs](https://docs.astro.build/).
+-
+-## Front-matter of Posts
+-
+-```yaml
+----
+-title: My First Blog Post
+-published: 2023-09-09
+-description: This is the first post of my new Astro blog.
+-image: ./cover.jpg
+-tags: [Foo, Bar]
+-category: Front-end
+-draft: false
+----
+-```
+-
+-| Attribute     | Description                                                                                                                                                                                                 |
+-|---------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+-| `title`       | The title of the post.                                                                                                                                                                                      |
+-| `published`   | The date the post was published.                                                                                                                                                                            |
+-| `description` | A short description of the post. Displayed on index page.                                                                                                                                                   |
+-| `image`       | The cover image path of the post.<br/>1. Start with `http://` or `https://`: Use web image<br/>2. Start with `/`: For image in `public` dir<br/>3. With none of the prefixes: Relative to the markdown file |
+-| `tags`        | The tags of the post.                                                                                                                                                                                       |
+-| `category`    | The category of the post.                                                                                                                                                                                   |
+-| `draft`        | If this post is still a draft, which won't be displayed.                                                                                                                                                    |
+-
+-## Where to Place the Post Files
+-
+-
+-
+-Your post files should be placed in `src/content/posts/` directory. You can also create sub-directories to better organize your posts and assets.
+-
+-```
+-src/content/posts/
+-├── post-1.md
+-└── post-2/
+-    ├── cover.png
+-    └── index.md
+-```
+diff -ruN a/src/content/posts/markdown-extended.md b/src/content/posts/markdown-extended.md
+--- a/src/content/posts/markdown-extended.md	2025-12-12 07:51:08.000000000 +0800
++++ b/src/content/posts/markdown-extended.md	1970-01-01 08:00:00.000000000 +0800
+@@ -1,95 +0,0 @@
+----
+-title: Markdown Extended Features
+-published: 2024-05-01
+-updated: 2024-11-29
+-description: 'Read more about Markdown features in Fuwari'
+-image: ''
+-tags: [Demo, Example, Markdown, Fuwari]
+-category: 'Examples'
+-draft: false 
+----
+-
+-## GitHub Repository Cards
+-You can add dynamic cards that link to GitHub repositories, on page load, the repository information is pulled from the GitHub API. 
+-
+-::github{repo="Fabrizz/MMM-OnSpotify"}
+-
+-Create a GitHub repository card with the code `::github{repo="<owner>/<repo>"}`.
+-
+-```markdown
+-::github{repo="saicaca/fuwari"}
+-```
+-
+-## Admonitions
+-
+-Following types of admonitions are supported: `note` `tip` `important` `warning` `caution`
+-
+-:::note
+-Highlights information that users should take into account, even when skimming.
+-:::
+-
+-:::tip
+-Optional information to help a user be more successful.
+-:::
+-
+-:::important
+-Crucial information necessary for users to succeed.
+-:::
+-
+-:::warning
+-Critical content demanding immediate user attention due to potential risks.
+-:::
+-
+-:::caution
+-Negative potential consequences of an action.
+-:::
+-
+-### Basic Syntax
+-
+-```markdown
+-:::note
+-Highlights information that users should take into account, even when skimming.
+-:::
+-
+-:::tip
+-Optional information to help a user be more successful.
+-:::
+-```
+-
+-### Custom Titles
+-
+-The title of the admonition can be customized.
+-
+-:::note[MY CUSTOM TITLE]
+-This is a note with a custom title.
+-:::
+-
+-```markdown
+-:::note[MY CUSTOM TITLE]
+-This is a note with a custom title.
+-:::
+-```
+-
+-### GitHub Syntax
+-
+-> [!TIP]
+-> [The GitHub syntax](https://github.com/orgs/community/discussions/16925) is also supported.
+-
+-```
+-> [!NOTE]
+-> The GitHub syntax is also supported.
+-
+-> [!TIP]
+-> The GitHub syntax is also supported.
+-```
+-
+-### Spoiler
+-
+-You can add spoilers to your text. The text also supports **Markdown** syntax.
+-
+-The content :spoiler[is hidden **ayyy**]!
+-
+-```markdown
+-The content :spoiler[is hidden **ayyy**]!
+-
+-```
+\ No newline at end of file
+diff -ruN a/src/content/posts/markdown.md b/src/content/posts/markdown.md
+--- a/src/content/posts/markdown.md	2025-12-12 07:51:08.000000000 +0800
++++ b/src/content/posts/markdown.md	1970-01-01 08:00:00.000000000 +0800
+@@ -1,175 +0,0 @@
+----
+-title: Markdown Example
+-published: 2023-10-01
+-description: A simple example of a Markdown blog post.
+-tags: [Markdown, Blogging, Demo]
+-category: Examples
+-draft: false
+----
+-
+-# An h1 header
+-
+-Paragraphs are separated by a blank line.
+-
+-2nd paragraph. _Italic_, **bold**, and `monospace`. Itemized lists
+-look like:
+-
+-- this one
+-- that one
+-- the other one
+-
+-Note that --- not considering the asterisk --- the actual text
+-content starts at 4-columns in.
+-
+-> Block quotes are
+-> written like so.
+->
+-> They can span multiple paragraphs,
+-> if you like.
+-
+-Use 3 dashes for an em-dash. Use 2 dashes for ranges (ex., "it's all
+-in chapters 12--14"). Three dots ... will be converted to an ellipsis.
+-Unicode is supported. ☺
+-
+-## An h2 header
+-
+-Here's a numbered list:
+-
+-1. first item
+-2. second item
+-3. third item
+-
+-Note again how the actual text starts at 4 columns in (4 characters
+-from the left side). Here's a code sample:
+-
+-    # Let me re-iterate ...
+-    for i in 1 .. 10 { do-something(i) }
+-
+-As you probably guessed, indented 4 spaces. By the way, instead of
+-indenting the block, you can use delimited blocks, if you like:
+-
+-```
+-define foobar() {
+-    print "Welcome to flavor country!";
+-}
+-```
+-
+-(which makes copying & pasting easier). You can optionally mark the
+-delimited block for Pandoc to syntax highlight it:
+-
+-```python
+-import time
+-# Quick, count to ten!
+-for i in range(10):
+-    # (but not *too* quick)
+-    time.sleep(0.5)
+-    print i
+-```
+-
+-### An h3 header
+-
+-Now a nested list:
+-
+-1. First, get these ingredients:
+-
+-    - carrots
+-    - celery
+-    - lentils
+-
+-2. Boil some water.
+-
+-3. Dump everything in the pot and follow
+-    this algorithm:
+-
+-        find wooden spoon
+-        uncover pot
+-        stir
+-        cover pot
+-        balance wooden spoon precariously on pot handle
+-        wait 10 minutes
+-        goto first step (or shut off burner when done)
+-
+-    Do not bump wooden spoon or it will fall.
+-
+-Notice again how text always lines up on 4-space indents (including
+-that last line which continues item 3 above).
+-
+-Here's a link to [a website](http://foo.bar), to a [local
+-doc](local-doc.html), and to a [section heading in the current
+-doc](#an-h2-header). Here's a footnote [^1].
+-
+-[^1]: Footnote text goes here.
+-
+-Tables can look like this:
+-
+-size material color
+-
+----
+-
+-9 leather brown
+-10 hemp canvas natural
+-11 glass transparent
+-
+-Table: Shoes, their sizes, and what they're made of
+-
+-(The above is the caption for the table.) Pandoc also supports
+-multi-line tables:
+-
+----
+-
+-keyword text
+-
+----
+-
+-red Sunsets, apples, and
+-other red or reddish
+-things.
+-
+-green Leaves, grass, frogs
+-and other things it's
+-not easy being.
+-
+----
+-
+-A horizontal rule follows.
+-
+----
+-
+-Here's a definition list:
+-
+-apples
+-: Good for making applesauce.
+-oranges
+-: Citrus!
+-tomatoes
+-: There's no "e" in tomatoe.
+-
+-Again, text is indented 4 spaces. (Put a blank line between each
+-term/definition pair to spread things out more.)
+-
+-Here's a "line block":
+-
+-| Line one
+-| Line too
+-| Line tree
+-
+-and images can be specified like so:
+-
+-[//]: # (![example image]&#40;./demo-banner.png "An exemplary image"&#41;)
+-
+-Inline math equations go in like so: $\omega = d\phi / dt$. Display
+-math should get its own line and be put in in double-dollarsigns:
+-
+-$$I = \int \rho R^{2} dV$$
+-
+-$$
+-\begin{equation*}
+-\pi
+-=3.1415926535
+- \;8979323846\;2643383279\;5028841971\;6939937510\;5820974944
+- \;5923078164\;0628620899\;8628034825\;3421170679\;\ldots
+-\end{equation*}
+-$$
+-
+-And note that you can backslash-escape any punctuation characters
+-which you wish to be displayed literally, ex.: \`foo\`, \*bar\*, etc.
+diff -ruN a/src/content/posts/tech-astro-retro-blog.md b/src/content/posts/tech-astro-retro-blog.md
+--- a/src/content/posts/tech-astro-retro-blog.md	1970-01-01 08:00:00.000000000 +0800
++++ b/src/content/posts/tech-astro-retro-blog.md	2026-10-12 16:01:05.107821500 +0800
+@@ -0,0 +1,37 @@
++---
++title: 用 Astro 搭一个「做旧」的静态博客
++published: 2026-10-08
++description: 记录把 Fuwari 主题改成古早二次元风格时踩过的一些坑和思路。
++tags: ["Astro", "前端", "博客"]
++category: 技术
++draft: false
++---
++
++这篇记录一下搭站过程里比较有意思的几处改动。
++
++## 为什么选 Astro
++
++静态站点、默认零 JS、构建产物干净，对个人博客来说几乎是理想形态。配上 Markdown 写作，体验很顺。
++
++主题基座用的是 [Fuwari](https://github.com/saicaca/fuwari)，本身已经很完善，导航、搜索、目录、RSS 都有。
++
++## 换肤其实改一个文件
++
++Fuwari 的主题色是一整套 OKLCH 变量，核心就一个 `--hue`：
++
++```css
++--primary: oklch(0.70 0.14 var(--hue)) oklch(0.75 0.14 var(--hue))
++--page-bg: oklch(0.95 0.01 var(--hue)) oklch(0.16 0.014 var(--hue))
++```
++
++我做的事很朴素：把色相固定成偏靛青的方向，同时**整体降低彩度**、把中性色往暖里偏一点，再把圆角改小，直角感一出来，古早的味道就有了。
++
++## 挂件是加在侧边栏
++
++访客计数、建站天数、背景音乐、友链墙，这些都是自己写的小组件，挂在侧边栏里。技术上没什么难点，难得的是克制——加太多反而会失去那种安静的感觉。
++
++## 一点体会
++
++做旧不等于复古。不是堆一堆像素字体和 GIF 就叫老互联网，真正让人怀念的是那种**留白**和**慢**。
++
++代码会继续放在仓库里，慢慢改。
+diff -ruN a/src/content/posts/video.md b/src/content/posts/video.md
+--- a/src/content/posts/video.md	2025-12-12 07:51:08.000000000 +0800
++++ b/src/content/posts/video.md	1970-01-01 08:00:00.000000000 +0800
+@@ -1,28 +0,0 @@
+----
+-title: Include Video in the Posts
+-published: 2023-08-01
+-description: This post demonstrates how to include embedded video in a blog post.
+-tags: [Example, Video]
+-category: Examples
+-draft: false
+----
+-
+-Just copy the embed code from YouTube or other platforms, and paste it in the markdown file.
+-
+-```yaml
+----
+-title: Include Video in the Post
+-published: 2023-10-19
+-// ...
+----
+-
+-<iframe width="100%" height="468" src="https://www.youtube.com/embed/5gIf0_xpFPI?si=N1WTorLKL0uwLsU_" title="YouTube video player" frameborder="0" allowfullscreen></iframe>
+-```
+-
+-## YouTube
+-
+-<iframe width="100%" height="468" src="https://www.youtube.com/embed/5gIf0_xpFPI?si=N1WTorLKL0uwLsU_" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+-
+-## Bilibili
+-
+-<iframe width="100%" height="468" src="//player.bilibili.com/player.html?bvid=BV1fK4y1s7Qf&p=1" scrolling="no" border="0" frameborder="no" framespacing="0" allowfullscreen="true"> </iframe>
+diff -ruN a/src/content/spec/about.md b/src/content/spec/about.md
+--- a/src/content/spec/about.md	2025-12-12 07:51:08.000000000 +0800
++++ b/src/content/spec/about.md	2026-10-12 16:00:52.000907700 +0800
+@@ -1,9 +1,21 @@
+-# About
+-This is the demo site for [Fuwari](https://github.com/saicaca/fuwari).
++# 关于我
+ 
+-::github{repo="saicaca/fuwari"}
++你好，我是**某某**，一只还留在这个互联网角落的老二次元。
+ 
+-> ### Sources of images used in this site
+-> - [Unsplash](https://unsplash.com/)
+-> - [星と少女](https://www.pixiv.net/artworks/108916539) by [Stella](https://www.pixiv.net/users/93273965)
+-> - [Rabbit - v1.4 Showcase](https://civitai.com/posts/586908) by [Rabbit_YourMajesty](https://civitai.com/user/Rabbit_YourMajesty)
+\ No newline at end of file
++这里记录三件事：
++
++- **日常日记** —— 生活里那些不重要但想记下的小事
++- **随笔** —— 看过的番、读过的东西、突然的念头
++- **技术思考** —— 写代码时踩过的坑和一点想法
++
++写得慢，更新随缘。如果你也在搭自己的小站，欢迎来交换友链。
++
++## 关于这个站
++
++用 [Astro](https://astro.build) 和 [Fuwari](https://github.com/saicaca/fuwari) 搭起来，再按自己的口味做旧了一下——
++暖一点的底色、霞鹜文楷、虚线分割线，还有角落里的 BGM 和访客计数，算是给自己留一点"以前互联网"的感觉。
++
++## 联系我
++
++- 邮箱：you@example.com
++- GitHub：[your-name](https://github.com/your-name)
+diff -ruN a/src/layouts/Layout.astro b/src/layouts/Layout.astro
+--- a/src/layouts/Layout.astro	2025-12-12 07:51:08.000000000 +0800
++++ b/src/layouts/Layout.astro	2026-10-12 16:23:44.724665300 +0800
+@@ -20,6 +20,14 @@
+ import { pathsEqual, url } from "../utils/url-utils";
+ import "katex/dist/katex.css";
+ 
++// 古早二次元：基础样式 + 自定义皮肤（集中在此，方便单独回退）
++import "../styles/variables.styl";
++import "../styles/main.css";
++import "../styles/markdown.css";
++import "../styles/scrollbar.css";
++import "../styles/transition.css";
++import "../styles/retro.css";
++
+ interface Props {
+ 	title?: string;
+ 	banner?: string;
+@@ -143,6 +151,9 @@
+ 		}}></style>  <!-- defines global css variables. This will be applied to <html> <body> and some other elements idk why -->
+ 
+ 
++		<!-- 霞鹜文楷：复古手写感中文字体（CDN 引入，加载失败会自动回退到衬线字体） -->
++		<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lxgw-wenkai-screen-webfont/style.css" />
++
+ 		<slot name="head"></slot>
+ 
+ 		<link rel="alternate" type="application/rss+xml" title={profileConfig.name} href={`${Astro.site}rss.xml`}/>
+diff -ruN a/src/pages/links.astro b/src/pages/links.astro
+--- a/src/pages/links.astro	1970-01-01 08:00:00.000000000 +0800
++++ b/src/pages/links.astro	2026-10-13 15:02:46.961781200 +0800
+@@ -0,0 +1,43 @@
++---
++import { friendsConfig } from "../config";
++import MainGridLayout from "../layouts/MainGridLayout.astro";
++---
++
++<MainGridLayout title="友情链接" description="友情链接墙">
++    <div class="card-base relative w-full px-9 py-6">
++        <h1 class="mb-1 text-2xl font-bold text-90">友情链接</h1>
++        <p class="mb-6 text-sm text-50">—— 常来常往的小站们 ——</p>
++
++        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
++            {friendsConfig.map((f) => (
++                <a
++                    href={f.url}
++                    target="_blank"
++                    rel="noopener"
++                    aria-label={f.name}
++                    class="group flex items-center gap-3 rounded-lg border border-dashed border-[var(--line-color)] p-3 transition hover:bg-[var(--btn-plain-bg-hover)]"
++                >
++                    {f.avatar && (
++                        <img
++                            src={f.avatar}
++                            alt={f.name}
++                            loading="lazy"
++                            onerror="this.onerror=null;this.src='/images/link-avatar.svg'"
++                            class="h-10 w-10 shrink-0 rounded-md object-cover"
++                        />
++                    )}
++                    <div class="min-w-0">
++                        <div class="truncate font-bold text-90 transition group-hover:text-[var(--primary)]">
++                            {f.name}
++                        </div>
++                        <div class="truncate text-xs text-50">{f.desc}</div>
++                    </div>
++                </a>
++            ))}
++        </div>
++
++        <div class="mt-8 border-t border-dashed border-[var(--line-color)] pt-4 text-sm text-50">
++            想在交换友链？欢迎来信，或者直接在下方留言。
++        </div>
++    </div>
++</MainGridLayout>
+diff -ruN a/src/styles/retro.css b/src/styles/retro.css
+--- a/src/styles/retro.css	1970-01-01 08:00:00.000000000 +0800
++++ b/src/styles/retro.css	2026-10-13 15:02:46.946465900 +0800
+@@ -0,0 +1,130 @@
++/* =====================================================================
++   古早二次元 · 自定义增量样式（retro.css）
++   只做"追加 / 微调"，不改动 fuwari 组件结构，方便单独回退
++   ===================================================================== */
++
++/* ---------- 字体 ---------- */
++/* 霞鹜文楷在 <head> 中通过 style.css 引入，这里只负责应用 */
++html,
++body {
++	font-family: "LXGW WenKai Screen", "LXGW WenKai", "Noto Serif SC", "Songti SC", serif;
++}
++
++/* 代码块/行内代码保持等宽，别被正文衬线字体带跑 */
++code,
++kbd,
++samp,
++pre {
++	font-family: "JetBrains Mono Variable", ui-monospace, SFMono-Regular, Menlo, Consolas,
++		"Courier New", monospace;
++}
++
++/* 标题字距略收，多一点手写标题的味道 */
++h1,
++h2,
++h3,
++h4,
++h5,
++h6 {
++	letter-spacing: 0.01em;
++}
++
++/* ---------- 做旧装饰 ---------- */
++
++/* 正文行距放宽，像旧杂志 */
++.prose {
++	line-height: 1.95;
++}
++
++/* 正文图片：细描边 + 小圆角 */
++.custom-md img {
++	border: 1px solid var(--line-color);
++	border-radius: var(--radius-large);
++}
++
++/* 引用块：左侧虚线描边 */
++.custom-md blockquote {
++	border-inline-start: 3px dashed var(--primary);
++	font-style: normal;
++}
++
++/* 水平分割线：虚线（古早博客标配） */
++.prose hr {
++	border: 0;
++	border-top: 2px dashed var(--line-color);
++	margin: 2rem 0;
++}
++
++/* 卡片：弱化阴影，改用细描边，做出"方框"的古早观感 */
++.card-base {
++	border: 1px solid var(--line-color);
++}
++
++/* 侧边栏挂件标题下面加一条虚线，分隔更明显 */
++#sidebar-sticky > * {
++	/* 占位：保持与 fuwari 一致的间距 */
++}
++
++/* 侧栏里的链接不要手风琴下划线 */
++#sidebar a {
++	text-decoration: none;
++}
++
++/* 友链 / 挂件里的图片统一小圆角 */
++#sidebar img {
++	border-radius: 0.25rem;
++}
++
++/* ---------- 全局收紧圆角：把"现代大圆角"退回小直角 ---------- */
++/* 只收紧方形容器，rounded-full 保持不变（头像 / 开关按钮仍是圆形） */
++.rounded-md {
++	border-radius: 0.2rem !important;
++}
++.rounded-lg {
++	border-radius: 0.25rem !important;
++}
++.rounded-xl {
++	border-radius: 0.3rem !important;
++}
++.rounded-2xl {
++	border-radius: 0.35rem !important;
++}
++
++/* ---------- 纸张肌理 ---------- */
++/* 底色来自 variables.styl 的 --page-bg，这里叠一层极淡的暖色高光 + 边缘暗角 + 纸纹噪点 */
++body {
++	background-image:
++		radial-gradient(
++			ellipse 130% 95% at 50% -12%,
++			rgba(255, 253, 244, 0.6),
++			transparent 62%
++		),
++		radial-gradient(
++			circle at 50% 45%,
++			transparent 58%,
++			rgba(122, 100, 58, 0.055) 100%
++		),
++		url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='0.045'/%3E%3C/svg%3E");
++	background-attachment: fixed, fixed, fixed;
++	background-repeat: no-repeat, no-repeat, repeat;
++}
++
++:root.dark body {
++	background-image:
++		radial-gradient(
++			ellipse 130% 95% at 50% -12%,
++			rgba(255, 250, 235, 0.045),
++			transparent 60%
++		),
++		url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='0.05'/%3E%3C/svg%3E");
++	background-attachment: fixed, fixed;
++	background-repeat: no-repeat, repeat;
++}
++
++/* ---------- 挂件标题：加一条虚线，像旧博客的小标题栏 ---------- */
++#sidebar-sticky .card-base > .font-bold {
++	border-block-end: 1px dashed var(--line-color);
++	padding-block-end: 0.3rem;
++	margin-inline-end: 1rem;
++}
++
+diff -ruN a/src/styles/variables.styl b/src/styles/variables.styl
+--- a/src/styles/variables.styl	2025-12-12 07:51:08.000000000 +0800
++++ b/src/styles/variables.styl	2026-10-13 15:02:09.963567900 +0800
+@@ -9,7 +9,7 @@
+ rainbow-dark = linear-gradient(to right, oklch(0.70 0.10 0), oklch(0.70 0.10 30), oklch(0.70 0.10 60), oklch(0.70 0.10 90), oklch(0.70 0.10 120), oklch(0.70 0.10 150), oklch(0.70 0.10 180), oklch(0.70 0.10 210), oklch(0.70 0.10 240), oklch(0.70 0.10 270), oklch(0.70 0.10 300), oklch(0.70 0.10 330), oklch(0.70 0.10 360))
+ 
+ :root
+-  --radius-large 1rem
++  --radius-large 0.25rem   /* 直角卡片 —— 古早感 */
+   --content-delay 150ms
+ 
+ /* An util to define variables that vary with light and dark mode */
+@@ -22,50 +22,51 @@
+       if length(value) > 1
+         {key}: value[1]
+ 
++/* 做旧配色：整体降饱和、中性色偏暖、强调色取褪色靛青 */
+ define({
+-  --primary: oklch(0.70 0.14 var(--hue)) oklch(0.75 0.14 var(--hue))
+-  --page-bg: oklch(0.95 0.01 var(--hue)) oklch(0.16 0.014 var(--hue))
+-  --card-bg: white oklch(0.23 0.015 var(--hue))
++  --primary: oklch(0.52 0.09 var(--hue)) oklch(0.74 0.09 var(--hue))
++  --page-bg: oklch(0.955 0.025 88) oklch(0.205 0.014 var(--hue))
++  --card-bg: oklch(0.993 0.013 90) oklch(0.25 0.016 var(--hue))
+ 
+-  --btn-content: oklch(0.55 0.12 var(--hue)) oklch(0.75 0.1 var(--hue))
++  --btn-content: oklch(0.45 0.07 var(--hue)) oklch(0.76 0.08 var(--hue))
+ 
+-  --btn-regular-bg: oklch(0.95 0.025 var(--hue)) oklch(0.33 0.035 var(--hue))
+-  --btn-regular-bg-hover: oklch(0.9 0.05 var(--hue)) oklch(0.38 0.04 var(--hue))
+-  --btn-regular-bg-active: oklch(0.85 0.08 var(--hue)) oklch(0.43 0.045 var(--hue))
++  --btn-regular-bg: oklch(0.94 0.02 var(--hue)) oklch(0.31 0.025 var(--hue))
++  --btn-regular-bg-hover: oklch(0.90 0.035 var(--hue)) oklch(0.36 0.03 var(--hue))
++  --btn-regular-bg-active: oklch(0.86 0.05 var(--hue)) oklch(0.41 0.035 var(--hue))
+ 
+-  --btn-plain-bg-hover: oklch(0.95 0.025 var(--hue)) oklch(0.30 0.035 var(--hue))
+-  --btn-plain-bg-active: oklch(0.98 0.01 var(--hue)) oklch(0.27 0.025 var(--hue))
++  --btn-plain-bg-hover: oklch(0.94 0.02 var(--hue)) oklch(0.29 0.025 var(--hue))
++  --btn-plain-bg-active: oklch(0.97 0.008 var(--hue)) oklch(0.26 0.02 var(--hue))
+ 
+-  --btn-card-bg-hover: oklch(0.98 0.005 var(--hue)) oklch(0.3 0.03 var(--hue))
+-  --btn-card-bg-active: oklch(0.9 0.03 var(--hue)) oklch(0.35 0.035 var(--hue))
++  --btn-card-bg-hover: oklch(0.97 0.004 var(--hue)) oklch(0.30 0.025 var(--hue))
++  --btn-card-bg-active: oklch(0.90 0.02 var(--hue)) oklch(0.34 0.03 var(--hue))
+ 
+   --enter-btn-bg: var(--btn-regular-bg)
+   --enter-btn-bg-hover: var(--btn-regular-bg-hover)
+   --enter-btn-bg-active: var(--btn-regular-bg-active)
+ 
+-  --deep-text: oklch(0.25 0.02 var(--hue))
++  --deep-text: oklch(0.28 0.015 var(--hue))
+ 
+-  --title-active: oklch(0.6 0.1 var(--hue))
++  --title-active: oklch(0.50 0.08 var(--hue))
+ 
+-  --line-divider: black(0.08) white(0.08)
++  --line-divider: black(0.10) white(0.10)
+ 
+-  --line-color: black(0.1) white(0.1)
++  --line-color: oklch(0.82 0.015 80) oklch(0.34 0.02 var(--hue))
+   --meta-divider: black(0.2) white(0.2)
+ 
+   --inline-code-bg: var(--btn-regular-bg)
+   --inline-code-color: var(--btn-content)
+-  --selection-bg: oklch(0.90 0.05 var(--hue)) oklch(0.40 0.08 var(--hue))
+-  --codeblock-selection: oklch(0.40 0.08 var(--hue))
+-  --codeblock-bg: oklch(0.17 0.015 var(--hue)) oklch(0.17 0.015 var(--hue))
+-  --codeblock-topbar-bg: oklch(0.3 0.02 var(--hue)) oklch(0.12 0.015 var(--hue))
++  --selection-bg: oklch(0.88 0.03 var(--hue)) oklch(0.38 0.05 var(--hue))
++  --codeblock-selection: oklch(0.38 0.05 var(--hue))
++  --codeblock-bg: oklch(0.18 0.012 var(--hue)) oklch(0.18 0.012 var(--hue))
++  --codeblock-topbar-bg: oklch(0.28 0.015 var(--hue)) oklch(0.13 0.012 var(--hue))
+ 
+   --license-block-bg: black(0.03) var(--codeblock-bg)
+ 
+-  --link-underline: oklch(0.93 0.04 var(--hue)) oklch(0.40 0.08 var(--hue))
+-  --link-hover: oklch(0.95 0.025 var(--hue)) oklch(0.40 0.08 var(--hue))
+-  --link-active: oklch(0.90 0.05 var(--hue)) oklch(0.35 0.07 var(--hue))
++  --link-underline: oklch(0.90 0.03 var(--hue)) oklch(0.38 0.05 var(--hue))
++  --link-hover: oklch(0.93 0.02 var(--hue)) oklch(0.38 0.05 var(--hue))
++  --link-active: oklch(0.88 0.035 var(--hue)) oklch(0.34 0.045 var(--hue))
+ 
+-  --float-panel-bg: white oklch(0.19 0.015 var(--hue))
++  --float-panel-bg: oklch(0.993 0.013 90) oklch(0.21 0.016 var(--hue))
+ 
+   --scrollbar-bg-light: black(0.4)
+   --scrollbar-bg-hover-light: black(0.5)
+@@ -84,15 +85,15 @@
+   --display-light-icon: 1 0
+   --display-dark-icon: 0 1
+ 
+-  --admonitions-color-tip: oklch(0.7 0.14 180) oklch(0.75 0.14 180)
+-  --admonitions-color-note: oklch(0.7 0.14 250) oklch(0.75 0.14 250)
+-  --admonitions-color-important: oklch(0.7 0.14 310) oklch(0.75 0.14 310)
+-  --admonitions-color-warning: oklch(0.7 0.14 60) oklch(0.75 0.14 60)
+-  --admonitions-color-caution: oklch(0.6 0.2 25) oklch(0.65 0.2 25)
+-
+-  --toc-badge-bg: oklch(0.89 0.050 var(--hue)) var(--btn-regular-bg)
+-  --toc-btn-hover: oklch(0.926 0.015 var(--hue)) oklch(0.22 0.02 var(--hue))
+-  --toc-btn-active: oklch(0.90 0.015 var(--hue)) oklch(0.25 0.02 var(--hue))
++  --admonitions-color-tip: oklch(0.68 0.09 180) oklch(0.73 0.09 180)
++  --admonitions-color-note: oklch(0.68 0.09 250) oklch(0.73 0.09 250)
++  --admonitions-color-important: oklch(0.68 0.09 310) oklch(0.73 0.09 310)
++  --admonitions-color-warning: oklch(0.68 0.09 60) oklch(0.73 0.09 60)
++  --admonitions-color-caution: oklch(0.58 0.14 25) oklch(0.63 0.14 25)
++
++  --toc-badge-bg: oklch(0.88 0.03 var(--hue)) var(--btn-regular-bg)
++  --toc-btn-hover: oklch(0.92 0.012 var(--hue)) oklch(0.22 0.02 var(--hue))
++  --toc-btn-active: oklch(0.90 0.012 var(--hue)) oklch(0.25 0.02 var(--hue))
+   --toc-width: calc((100vw - var(--page-width)) / 2 - 1rem)
+-  --toc-item-active: oklch(0.70 0.13 var(--hue)) oklch(0.35 0.07 var(--hue))
++  --toc-item-active: oklch(0.60 0.09 var(--hue)) oklch(0.34 0.05 var(--hue))
+ })
+diff -ruN a/src/types/config.ts b/src/types/config.ts
+--- a/src/types/config.ts	2025-12-12 07:51:08.000000000 +0800
++++ b/src/types/config.ts	2026-10-12 16:00:23.451141600 +0800
+@@ -71,6 +71,13 @@
+ 	}[];
+ };
+ 
++export type FriendLink = {
++	name: string;
++	url: string;
++	avatar?: string;
++	desc?: string;
++};
++
+ export type LicenseConfig = {
+ 	enable: boolean;
+ 	name: string;
