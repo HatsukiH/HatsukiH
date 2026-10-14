@@ -20,6 +20,14 @@ import type { Favicon } from "../types/config";
 import { pathsEqual, url } from "../utils/url-utils";
 import "katex/dist/katex.css";
 
+// 古早二次元：基础样式 + 自定义皮肤（集中在此，方便单独回退）
+import "../styles/variables.styl";
+import "../styles/main.css";
+import "../styles/markdown.css";
+import "../styles/scrollbar.css";
+import "../styles/transition.css";
+import "../styles/retro.css";
+
 interface Props {
 	title?: string;
 	banner?: string;
@@ -142,6 +150,9 @@ const bannerOffset =
 			'page-width': `${PAGE_WIDTH}rem`,
 		}}></style>  <!-- defines global css variables. This will be applied to <html> <body> and some other elements idk why -->
 
+
+		<!-- 霞鹜文楷：复古手写感中文字体（CDN 引入，加载失败会自动回退到衬线字体） -->
+		<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lxgw-wenkai-screen-webfont/style.css" />
 
 		<slot name="head"></slot>
 

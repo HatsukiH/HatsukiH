@@ -71,6 +71,13 @@ export type ProfileConfig = {
 	}[];
 };
 
+export type FriendLink = {
+	name: string;
+	url: string;
+	avatar?: string;
+	desc?: string;
+};
+
 export type LicenseConfig = {
 	enable: boolean;
 	name: string;

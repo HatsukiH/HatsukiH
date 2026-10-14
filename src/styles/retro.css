@@ -1,0 +1,130 @@
+/* =====================================================================
+   古早二次元 · 自定义增量样式（retro.css）
+   只做"追加 / 微调"，不改动 fuwari 组件结构，方便单独回退
+   ===================================================================== */
+
+/* ---------- 字体 ---------- */
+/* 霞鹜文楷在 <head> 中通过 style.css 引入，这里只负责应用 */
+html,
+body {
+	font-family: "LXGW WenKai Screen", "LXGW WenKai", "Noto Serif SC", "Songti SC", serif;
+}
+
+/* 代码块/行内代码保持等宽，别被正文衬线字体带跑 */
+code,
+kbd,
+samp,
+pre {
+	font-family: "JetBrains Mono Variable", ui-monospace, SFMono-Regular, Menlo, Consolas,
+		"Courier New", monospace;
+}
+
+/* 标题字距略收，多一点手写标题的味道 */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+	letter-spacing: 0.01em;
+}
+
+/* ---------- 做旧装饰 ---------- */
+
+/* 正文行距放宽，像旧杂志 */
+.prose {
+	line-height: 1.95;
+}
+
+/* 正文图片：细描边 + 小圆角 */
+.custom-md img {
+	border: 1px solid var(--line-color);
+	border-radius: var(--radius-large);
+}
+
+/* 引用块：左侧虚线描边 */
+.custom-md blockquote {
+	border-inline-start: 3px dashed var(--primary);
+	font-style: normal;
+}
+
+/* 水平分割线：虚线（古早博客标配） */
+.prose hr {
+	border: 0;
+	border-top: 2px dashed var(--line-color);
+	margin: 2rem 0;
+}
+
+/* 卡片：弱化阴影，改用细描边，做出"方框"的古早观感 */
+.card-base {
+	border: 1px solid var(--line-color);
+}
+
+/* 侧边栏挂件标题下面加一条虚线，分隔更明显 */
+#sidebar-sticky > * {
+	/* 占位：保持与 fuwari 一致的间距 */
+}
+
+/* 侧栏里的链接不要手风琴下划线 */
+#sidebar a {
+	text-decoration: none;
+}
+
+/* 友链 / 挂件里的图片统一小圆角 */
+#sidebar img {
+	border-radius: 0.25rem;
+}
+
+/* ---------- 全局收紧圆角：把"现代大圆角"退回小直角 ---------- */
+/* 只收紧方形容器，rounded-full 保持不变（头像 / 开关按钮仍是圆形） */
+.rounded-md {
+	border-radius: 0.2rem !important;
+}
+.rounded-lg {
+	border-radius: 0.25rem !important;
+}
+.rounded-xl {
+	border-radius: 0.3rem !important;
+}
+.rounded-2xl {
+	border-radius: 0.35rem !important;
+}
+
+/* ---------- 纸张肌理 ---------- */
+/* 底色来自 variables.styl 的 --page-bg，这里叠一层极淡的暖色高光 + 边缘暗角 + 纸纹噪点 */
+body {
+	background-image:
+		radial-gradient(
+			ellipse 130% 95% at 50% -12%,
+			rgba(255, 253, 244, 0.6),
+			transparent 62%
+		),
+		radial-gradient(
+			circle at 50% 45%,
+			transparent 58%,
+			rgba(122, 100, 58, 0.055) 100%
+		),
+		url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='0.045'/%3E%3C/svg%3E");
+	background-attachment: fixed, fixed, fixed;
+	background-repeat: no-repeat, no-repeat, repeat;
+}
+
+:root.dark body {
+	background-image:
+		radial-gradient(
+			ellipse 130% 95% at 50% -12%,
+			rgba(255, 250, 235, 0.045),
+			transparent 60%
+		),
+		url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='0.05'/%3E%3C/svg%3E");
+	background-attachment: fixed, fixed;
+	background-repeat: no-repeat, repeat;
+}
+
+/* ---------- 挂件标题：加一条虚线，像旧博客的小标题栏 ---------- */
+#sidebar-sticky .card-base > .font-bold {
+	border-block-end: 1px dashed var(--line-color);
+	padding-block-end: 0.3rem;
+	margin-inline-end: 1rem;
+}
+

@@ -1,9 +1,21 @@
-# About
-This is the demo site for [Fuwari](https://github.com/saicaca/fuwari).
+# 关于我
 
-::github{repo="saicaca/fuwari"}
+你好，我是**某某**，一只还留在这个互联网角落的老二次元。
 
-> ### Sources of images used in this site
-> - [Unsplash](https://unsplash.com/)
-> - [星と少女](https://www.pixiv.net/artworks/108916539) by [Stella](https://www.pixiv.net/users/93273965)
-> - [Rabbit - v1.4 Showcase](https://civitai.com/posts/586908) by [Rabbit_YourMajesty](https://civitai.com/user/Rabbit_YourMajesty)
+这里记录三件事：
+
+- **日常日记** —— 生活里那些不重要但想记下的小事
+- **随笔** —— 看过的番、读过的东西、突然的念头
+- **技术思考** —— 写代码时踩过的坑和一点想法
+
+写得慢，更新随缘。如果你也在搭自己的小站，欢迎来交换友链。
+
+## 关于这个站
+
+用 [Astro](https://astro.build) 和 [Fuwari](https://github.com/saicaca/fuwari) 搭起来，再按自己的口味做旧了一下——
+暖一点的底色、霞鹜文楷、虚线分割线，还有角落里的 BGM 和访客计数，算是给自己留一点"以前互联网"的感觉。
+
+## 联系我
+
+- 邮箱：you@example.com
+- GitHub：[your-name](https://github.com/your-name)

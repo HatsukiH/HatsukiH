@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+  <rect width="64" height="64" fill="#f3eee1"/>
+  <rect x="0.5" y="0.5" width="63" height="63" fill="none" stroke="#cdc2a6"/>
+  <text x="32" y="43" font-size="30" text-anchor="middle" fill="#a89a78" font-family="serif">友</text>
+</svg>

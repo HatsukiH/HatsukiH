@@ -1,5 +1,6 @@
 import type {
 	ExpressiveCodeConfig,
+	FriendLink,
 	LicenseConfig,
 	NavBarConfig,
 	ProfileConfig,
@@ -8,12 +9,12 @@ import type {
 import { LinkPreset } from "./types/config";
 
 export const siteConfig: SiteConfig = {
-	title: "Fuwari",
-	subtitle: "Demo Site",
-	lang: "en", // Language code, e.g. 'en', 'zh_CN', 'ja', etc.
+	title: "某某の小部屋",
+	subtitle: "记录一些不重要的小事",
+	lang: "zh_CN", // Language code, e.g. 'en', 'zh_CN', 'ja', etc.
 	themeColor: {
-		hue: 250, // Default hue for the theme color, from 0 to 360. e.g. red: 0, teal: 200, cyan: 250, pink: 345
-		fixed: false, // Hide the theme color picker for visitors
+		hue: 265, // 褪色靛青 —— 古早二次元配色（0~360）
+		fixed: true, // 固定色相，不让访客改动，保持氛围统一
 	},
 	banner: {
 		enable: false,
@@ -45,34 +46,36 @@ export const navBarConfig: NavBarConfig = {
 		LinkPreset.Archive,
 		LinkPreset.About,
 		{
+			name: "友链",
+			url: "/links/", // 站内链接无需包含 base 路径
+		},
+		{
 			name: "GitHub",
-			url: "https://github.com/saicaca/fuwari", // Internal links should not include the base path, as it is automatically added
+			url: "https://github.com/your-name", // 占位：改成你自己的地址
 			external: true, // Show an external link icon and will open in a new tab
 		},
 	],
 };
 
 export const profileConfig: ProfileConfig = {
-	avatar: "assets/images/demo-avatar.png", // Relative to the /src directory. Relative to the /public directory if it starts with '/'
-	name: "Lorem Ipsum",
-	bio: "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
+	avatar: "assets/images/demo-avatar.png", // 占位头像：可换成 src/assets/images/ 下的图，或用 / 开头指向 public
+	name: "某某",
+	bio: "一只还留在这个互联网角落的老二次元",
 	links: [
 		{
-			name: "Twitter",
-			icon: "fa6-brands:twitter", // Visit https://icones.js.org/ for icon codes
-			// You will need to install the corresponding icon set if it's not already included
-			// `pnpm add @iconify-json/<icon-set-name>`
-			url: "https://twitter.com",
-		},
-		{
-			name: "Steam",
-			icon: "fa6-brands:steam",
-			url: "https://store.steampowered.com",
-		},
-		{
 			name: "GitHub",
-			icon: "fa6-brands:github",
-			url: "https://github.com/saicaca/fuwari",
+			icon: "fa6-brands:github", // Visit https://icones.js.org/ for icon codes
+			url: "https://github.com/your-name",
+		},
+		{
+			name: "邮箱",
+			icon: "fa6-solid:envelope",
+			url: "mailto:you@example.com",
+		},
+		{
+			name: "RSS",
+			icon: "fa6-solid:rss",
+			url: "/rss.xml",
 		},
 	],
 };
@@ -88,3 +91,25 @@ export const expressiveCodeConfig: ExpressiveCodeConfig = {
 	// Please select a dark theme, as this blog theme currently only supports dark background color
 	theme: "github-dark",
 };
+
+// 友情链接墙（占位数据，替换成你自己常逛的小站）
+export const friendsConfig: FriendLink[] = [
+	{
+		name: "某某の小站",
+		url: "https://example.com",
+		avatar: "https://example.com/avatar.png",
+		desc: "一个不太更新的博客",
+	},
+	{
+		name: "アニメ置き場",
+		url: "https://example.org",
+		avatar: "https://example.org/avatar.png",
+		desc: "追番与截图堆放处",
+	},
+	{
+		name: "深夜写代码",
+		url: "https://example.net",
+		avatar: "https://example.net/avatar.png",
+		desc: "技术随想与踩坑记录",
+	},
+];

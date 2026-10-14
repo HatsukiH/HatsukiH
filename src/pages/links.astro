@@ -1,0 +1,43 @@
+---
+import { friendsConfig } from "../config";
+import MainGridLayout from "../layouts/MainGridLayout.astro";
+---
+
+<MainGridLayout title="友情链接" description="友情链接墙">
+    <div class="card-base relative w-full px-9 py-6">
+        <h1 class="mb-1 text-2xl font-bold text-90">友情链接</h1>
+        <p class="mb-6 text-sm text-50">—— 常来常往的小站们 ——</p>
+
+        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {friendsConfig.map((f) => (
+                <a
+                    href={f.url}
+                    target="_blank"
+                    rel="noopener"
+                    aria-label={f.name}
+                    class="group flex items-center gap-3 rounded-lg border border-dashed border-[var(--line-color)] p-3 transition hover:bg-[var(--btn-plain-bg-hover)]"
+                >
+                    {f.avatar && (
+                        <img
+                            src={f.avatar}
+                            alt={f.name}
+                            loading="lazy"
+                            onerror="this.onerror=null;this.src='/images/link-avatar.svg'"
+                            class="h-10 w-10 shrink-0 rounded-md object-cover"
+                        />
+                    )}
+                    <div class="min-w-0">
+                        <div class="truncate font-bold text-90 transition group-hover:text-[var(--primary)]">
+                            {f.name}
+                        </div>
+                        <div class="truncate text-xs text-50">{f.desc}</div>
+                    </div>
+                </a>
+            ))}
+        </div>
+
+        <div class="mt-8 border-t border-dashed border-[var(--line-color)] pt-4 text-sm text-50">
+            想在交换友链？欢迎来信，或者直接在下方留言。
+        </div>
+    </div>
+</MainGridLayout>
